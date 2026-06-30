@@ -1,0 +1,29 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>RUNNING</title></head><body>
+<iframe id="app" src="../index.html" hidden></iframe><pre id="result">RUNNING</pre>
+<script>
+document.getElementById("app").addEventListener("load", async () => {
+  try {
+    const frame = document.getElementById("app"), win = frame.contentWindow, R = win.RenjuRules, A = win.RenjuApp;
+    const board = new Int8Array(225);
+    [[6,7],[8,7],[7,6],[7,8]].forEach(([x,y]) => board[R.key(x,y)] = R.BLACK);
+    const canvas = win.document.getElementById("board");
+    const checks = [
+      ["rule engine", R.forbiddenReason(board,7,7) === "double-three"],
+      ["board initialized", A.state.board.length === 225],
+      ["history initialized", A.state.history.length === 1],
+      ["canvas painted", canvas.getContext("2d").getImageData(1,1,1,1).data[3] === 255],
+      ["worker supported", typeof win.Worker === "function"]
+    ];
+    win.document.getElementById("depth").value = "1";
+    win.document.getElementById("timeLimit").value = "1";
+    win.document.getElementById("humanColor").value = "2";
+    A.newGame();
+    for (let attempt = 0; attempt < 60 && A.state.history.length === 1; attempt += 1) await new Promise((resolve) => setTimeout(resolve, 50));
+    checks.push(["worker completed opening move", A.state.history.length === 2 && A.state.board[R.key(7,7)] === R.BLACK]);
+    const ok = checks.every((item) => item[1]);
+    document.getElementById("result").textContent = (ok ? "PASS" : "FAIL") + "\n" + checks.map((item) => (item[1] ? "PASS " : "FAIL ") + item[0]).join("\n");
+    document.title = ok ? "PASS" : "FAIL";
+  } catch (error) { document.getElementById("result").textContent = "FAIL\n" + error.stack; document.title = "FAIL"; }
+}, { once:true });
+</script></body></html>

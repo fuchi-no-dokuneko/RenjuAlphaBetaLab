@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; worker-src 'self'; connect-src 'none'; object-src 'none'; base-uri 'self'; frame-ancestors 'none'; form-action 'none'">
+  <meta name="referrer" content="no-referrer"><title>Renju Alpha-Beta Lab</title><link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header><div><span class="mark">R</span><strong>Renju Alpha-Beta Lab</strong></div><span>15 x 15 | official black restrictions</span></header>
+  <main>
+    <section class="game-head"><div><h1>Renju against parallel search</h1><p>Play Gomoku-style five-in-a-row with black overline, double-four, and double-three forbidden moves enforced.</p></div><div class="turn"><span id="turnStone" class="stone black"></span><div><small>Turn</small><strong id="turnLabel">Black / You</strong></div></div></section>
+    <section class="controls">
+      <label>Play as<select id="humanColor"><option value="1">Black (first)</option><option value="2">White</option></select></label>
+      <label>Search depth K<input id="depth" type="number" min="1" max="6" value="3"></label>
+      <label>Time limit (seconds)<input id="timeLimit" type="number" min="1" max="30" value="8"></label>
+      <label class="check"><input id="cheat" type="checkbox"> Show forbidden points and candidate scores</label>
+      <button id="newGame" class="primary" type="button">New game</button><button id="undo" type="button">Undo round</button>
+    </section>
+    <div id="status" class="status">Black moves first. Select an intersection.</div>
+    <section class="workspace">
+      <section class="board-panel"><canvas id="board" width="900" height="900" aria-label="Renju board"></canvas></section>
+      <aside class="analysis">
+        <div class="analysis-head"><div><small>Search</small><strong id="searchState">Idle</strong></div><div><small>Workers</small><strong id="workerCount">0</strong></div><div><small>Nodes</small><strong id="nodes">0</strong></div></div>
+        <div class="progress"><div id="progressBar"></div></div>
+        <div class="section-title"><h2>Root candidates</h2><span id="candidateCount">0 evaluated</span></div>
+        <div id="candidates" class="candidates"><p>No search results.</p></div>
+        <div class="section-title"><h2>Principal variation</h2><span>best line</span></div>
+        <div id="pv" class="pv">No principal variation.</div>
+        <div class="replay"><button id="replayBack" type="button">Previous</button><span id="replayLabel">Live position</span><button id="replayForward" type="button">Next</button><button id="live" type="button">Live</button></div>
+        <div class="rules"><h2>Black restrictions</h2><dl><dt>Overline</dt><dd>Six or more contiguous black stones.</dd><dt>Double-four</dt><dd>One move creates two distinct fours.</dd><dt>Double-three</dt><dd>One move creates two free threes that can legally become straight fours.</dd></dl></div>
+      </aside>
+    </section>
+  </main>
+  <footer>Rule reference and implementation limits are documented in the repository README.</footer>
+  <script src="engine.js"></script><script src="app.js"></script>
+</body></html>
