@@ -10,6 +10,7 @@ The implementation follows the [International Rules of Renju](https://renju.se/r
 
 ```bash
 node tests/rules.test.js
+node tests/worker.test.js
 ./serve-local.sh
 ```
 

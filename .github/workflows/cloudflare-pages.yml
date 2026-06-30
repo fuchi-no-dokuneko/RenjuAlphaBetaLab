@@ -10,13 +10,14 @@ jobs:
       - uses: actions/checkout@v4
       - run: node --check engine.js && node --check app.js && node --check ai-worker.js
       - run: node tests/rules.test.js
+      - run: node tests/worker.test.js
       - name: Browser smoke test
         run: |
           python3 -m http.server 8765 --bind 127.0.0.1 >/tmp/server.log 2>&1 &
           trap 'kill $!' EXIT
           for attempt in {1..20}; do curl -fsS http://127.0.0.1:8765/tests/browser-smoke.html >/dev/null && break; sleep .2; done
           browser="$(command -v google-chrome || command -v chromium || command -v chromium-browser)"
-          "$browser" --headless --no-sandbox --disable-gpu --disable-dev-shm-usage --virtual-time-budget=30000 --dump-dom http://127.0.0.1:8765/tests/browser-smoke.html >/tmp/smoke.html
+          "$browser" --headless --no-sandbox --disable-gpu --disable-dev-shm-usage --virtual-time-budget=5000 --dump-dom http://127.0.0.1:8765/tests/browser-smoke.html >/tmp/smoke.html
           if ! grep '<pre id="result">PASS' /tmp/smoke.html; then
             sed -n '/<pre id="result">/,/<\/pre>/p' /tmp/smoke.html
             exit 1
