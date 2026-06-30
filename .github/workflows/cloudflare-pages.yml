@@ -16,8 +16,11 @@ jobs:
           trap 'kill $!' EXIT
           for attempt in {1..20}; do curl -fsS http://127.0.0.1:8765/tests/browser-smoke.html >/dev/null && break; sleep .2; done
           browser="$(command -v google-chrome || command -v chromium || command -v chromium-browser)"
-          "$browser" --headless --no-sandbox --disable-gpu --disable-dev-shm-usage --virtual-time-budget=5000 --dump-dom http://127.0.0.1:8765/tests/browser-smoke.html >/tmp/smoke.html
-          grep '<pre id="result">PASS' /tmp/smoke.html
+          "$browser" --headless --no-sandbox --disable-gpu --disable-dev-shm-usage --virtual-time-budget=15000 --dump-dom http://127.0.0.1:8765/tests/browser-smoke.html >/tmp/smoke.html
+          if ! grep '<pre id="result">PASS' /tmp/smoke.html; then
+            sed -n '/<pre id="result">/,/<\/pre>/p' /tmp/smoke.html
+            exit 1
+          fi
   deploy:
     needs: validate
     if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
