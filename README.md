@@ -1,6 +1,6 @@
 # Renju Alpha-Beta Lab
 
-A static 15x15 Renju game with black forbidden-move enforcement and parallel root alpha-beta search. Root candidates are split across up to four Web Workers; each worker searches its assigned branches to depth `K` and reports candidate score, node progress, and principal variation.
+A static 15x15 Renju game with black forbidden-move enforcement and parallel root alpha-beta search. Root candidates are split across up to four Web Workers; each worker searches its assigned branches to depth `K` and reports candidate score, node progress, and principal variation. The board includes A-H/J-P and 1-15 coordinates, while visualization mode overlays forbidden moves and color-ranked minimax scores.
 
 ## Rules
 

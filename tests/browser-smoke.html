@@ -13,7 +13,10 @@ document.getElementById("app").addEventListener("load", () => {
       ["board initialized", A.state.board.length === 225],
       ["history initialized", A.state.history.length === 1],
       ["canvas painted", canvas.getContext("2d").getImageData(1,1,1,1).data[3] === 255],
-      ["worker supported", typeof win.Worker === "function"]
+      ["worker supported", typeof win.Worker === "function"],
+      ["board coordinates", A.columnName(0) === "A" && A.columnName(7) === "H" && A.columnName(8) === "J" && A.columnName(14) === "P"],
+      ["score labels", A.compactScore(12500) === "13k" && A.compactScore(-1500) === "-1.5k"],
+      ["score color levels", A.scoreStyle(-10,-10,10).fill !== A.scoreStyle(10,-10,10).fill]
     ];
     const ok = checks.every((item) => item[1]);
     document.getElementById("result").textContent = (ok ? "PASS" : "FAIL") + "\n" + checks.map((item) => (item[1] ? "PASS " : "FAIL ") + item[0]).join("\n");

@@ -13,10 +13,15 @@
       <label>Play as<select id="humanColor"><option value="1">Black (first)</option><option value="2">White</option></select></label>
       <label>Search depth K<input id="depth" type="number" min="1" max="6" value="3"></label>
       <label>Time limit (seconds)<input id="timeLimit" type="number" min="1" max="30" value="8"></label>
-      <label class="check"><input id="cheat" type="checkbox"> Show forbidden points and candidate scores</label>
+      <label class="check"><input id="cheat" type="checkbox"> Visualize forbidden points and AI scores</label>
       <button id="newGame" class="primary" type="button">New game</button><button id="undo" type="button">Undo round</button>
     </section>
     <div id="status" class="status">Black moves first. Select an intersection.</div>
+    <div id="scoreLegend" class="score-legend" hidden aria-label="AI candidate score colors">
+      <span><i class="score-low"></i>Lower score</span>
+      <span><i class="score-mid"></i>Middle score</span>
+      <span><i class="score-high"></i>Higher score</span>
+    </div>
     <section class="workspace">
       <section class="board-panel"><canvas id="board" width="900" height="900" aria-label="Renju board"></canvas></section>
       <aside class="analysis">
