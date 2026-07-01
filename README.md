@@ -15,3 +15,7 @@ node tests/worker.test.js
 ```
 
 Open `http://localhost:8086`.
+
+## Credits
+
+See [CREDITS.md](CREDITS.md) for Renju rules and alpha-beta references.
