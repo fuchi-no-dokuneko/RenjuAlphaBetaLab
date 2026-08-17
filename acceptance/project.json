@@ -1,0 +1,6 @@
+{
+  "repository": "RenjuAlphaBetaLab",
+  "platform": "web",
+  "baseUrl": "https://renju-alpha-beta-lab.pages.dev/",
+  "timeoutSeconds": 90
+}
