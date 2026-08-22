@@ -180,6 +180,42 @@ frame.addEventListener("load", async () => {
     A.newGame();
     check("application cancels and cleans workers", startedWorkers && !A.state.thinking && A.state.workers.length === 0 && A.state.history.length === 1);
 
+    const clickBoard = (move) => {
+      const rect = canvas.getBoundingClientRect();
+      const unit = rect.width / 16;
+      canvas.dispatchEvent(new win.MouseEvent("click", {
+        bubbles: true,
+        clientX: rect.left + (move.x + 1) * unit,
+        clientY: rect.top + (move.y + 1) * unit
+      }));
+    };
+    win.document.getElementById("depth").value = "1";
+    win.document.getElementById("timeLimit").value = "1";
+    clickBoard({ x: 7, y: 7 });
+    await waitFor(() => !A.state.thinking && A.state.history.length >= 3);
+    const firstRoundLength = A.state.history.length;
+    clickBoard({ x: 7, y: 7 });
+    check("occupied canvas move is rejected", A.state.history.length === firstRoundLength && /occupied/i.test(win.document.getElementById("status").textContent));
+    win.document.getElementById("replayBack").click();
+    const replayedHistory = A.state.replayIndex < A.state.history.length - 1;
+    win.document.getElementById("live").click();
+    check("replay returns to live board", replayedHistory && A.state.replayIndex === A.state.history.length - 1);
+    win.document.getElementById("undo").click();
+    check("undo removes a complete round", A.state.history.length === 1 && A.state.board.every((value) => value === R.EMPTY));
+
+    A.newGame();
+    let humanTurns = 0;
+    while (!A.state.over && humanTurns < 80) {
+      const move = R.generateCandidates(A.state.board, R.BLACK, 225)[0];
+      if (!move) break;
+      clickBoard(move);
+      humanTurns += 1;
+      if (!A.state.over) await waitFor(() => !A.state.thinking, 15000);
+    }
+    check("complete human and AI game reaches terminal state", A.state.over && humanTurns > 2 && /wins|draw|game over/i.test(win.document.getElementById("status").textContent));
+    check("complete game retains replayable history", A.state.history.length > 5 && A.state.replayIndex === A.state.history.length - 1);
+
+    A.newGame();
     A.state.board[R.key(7, 7)] = R.BLACK;
     A.state.board[R.key(8, 8)] = R.WHITE;
     A.state.candidates = [
