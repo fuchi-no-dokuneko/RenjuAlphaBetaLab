@@ -1,26 +1,210 @@
 <!doctype html>
-<html><head><meta charset="utf-8"><title>RUNNING</title></head><body>
-<iframe id="app" src="../index.html" hidden></iframe><pre id="result">RUNNING</pre>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>RUNNING</title>
+  <style>
+    html, body { margin: 0; font: 14px system-ui, sans-serif; }
+    #result { margin: 0; padding: 8px 12px; white-space: pre-wrap; }
+    #app { display: block; width: 100%; height: 1600px; border: 0; }
+  </style>
+</head>
+<body>
+<pre id="result">RUNNING</pre>
+<iframe id="app" src="../index.html" title="Renju application under test"></iframe>
 <script>
-document.getElementById("app").addEventListener("load", () => {
+const result = document.getElementById("result");
+const frame = document.getElementById("app");
+
+function waitFor(predicate, timeoutMs = 15000) {
+  const started = performance.now();
+  return new Promise((resolve, reject) => {
+    const poll = () => {
+      try {
+        if (predicate()) {
+          resolve(true);
+          return;
+        }
+      } catch (error) {
+        reject(error);
+        return;
+      }
+      if (performance.now() - started >= timeoutMs) {
+        reject(new Error("Timed out waiting for browser condition"));
+        return;
+      }
+      setTimeout(poll, 25);
+    };
+    poll();
+  });
+}
+
+function searchWorker(payload, timeoutMs = 5000) {
+  return new Promise((resolve, reject) => {
+    const worker = new Worker("../ai-worker.js");
+    const messages = [];
+    const timeout = setTimeout(() => {
+      worker.terminate();
+      reject(new Error("Production worker search timed out"));
+    }, timeoutMs);
+    worker.onerror = (event) => {
+      clearTimeout(timeout);
+      worker.terminate();
+      reject(new Error(event.message || "Production worker failed"));
+    };
+    worker.onmessage = (event) => {
+      messages.push(event.data);
+      if (event.data.type === "done") {
+        clearTimeout(timeout);
+        worker.terminate();
+        resolve(messages);
+      }
+    };
+    worker.postMessage(payload);
+  });
+}
+
+function cancelWorker(payload) {
+  return new Promise((resolve, reject) => {
+    const worker = new Worker("../ai-worker.js");
+    let messages = 0;
+    let done = false;
+    worker.onerror = (event) => {
+      worker.terminate();
+      reject(new Error(event.message || "Production worker failed"));
+    };
+    worker.onmessage = (event) => {
+      messages += 1;
+      if (event.data.type === "done") done = true;
+    };
+    worker.postMessage(payload);
+    setTimeout(() => {
+      worker.terminate();
+      const countAtCancellation = messages;
+      setTimeout(() => resolve({ countAtCancellation, done, messages }), 100);
+    }, 10);
+  });
+}
+
+frame.addEventListener("load", async () => {
+  const checks = [];
+  const check = (name, passed) => checks.push([name, Boolean(passed)]);
   try {
-    const frame = document.getElementById("app"), win = frame.contentWindow, R = win.RenjuRules, A = win.RenjuApp;
+    const win = frame.contentWindow;
+    const R = win.RenjuRules;
+    const A = win.RenjuApp;
     const board = new Int8Array(225);
-    [[6,7],[8,7],[7,6],[7,8]].forEach(([x,y]) => board[R.key(x,y)] = R.BLACK);
+    [[6, 7], [8, 7], [7, 6], [7, 8]].forEach(([x, y]) => {
+      board[R.key(x, y)] = R.BLACK;
+    });
     const canvas = win.document.getElementById("board");
-    const checks = [
-      ["rule engine", R.forbiddenReason(board,7,7) === "double-three"],
-      ["board initialized", A.state.board.length === 225],
-      ["history initialized", A.state.history.length === 1],
-      ["canvas painted", canvas.getContext("2d").getImageData(1,1,1,1).data[3] === 255],
-      ["worker supported", typeof win.Worker === "function"],
-      ["board coordinates", A.columnName(0) === "A" && A.columnName(7) === "H" && A.columnName(8) === "J" && A.columnName(14) === "P"],
-      ["score labels", A.compactScore(12500) === "13k" && A.compactScore(-1500) === "-1.5k"],
-      ["score color levels", A.scoreStyle(-10,-10,10).fill !== A.scoreStyle(10,-10,10).fill]
+
+    check("rule engine", R.forbiddenReason(board, 7, 7) === "double-three");
+    check("board initialized", A.state.board.length === 225);
+    check("history initialized", A.state.history.length === 1);
+    check("canvas painted", canvas.getContext("2d").getImageData(1, 1, 1, 1).data[3] === 255);
+    check("worker supported", typeof win.Worker === "function");
+    check("board coordinates", A.columnName(0) === "A" && A.columnName(7) === "H" && A.columnName(8) === "J" && A.columnName(14) === "P");
+    check("score labels", A.compactScore(12500) === "13k" && A.compactScore(-1500) === "-1.5k");
+    check("score color levels", A.scoreStyle(-10, -10, 10).fill !== A.scoreStyle(10, -10, 10).fill);
+
+    const seededSearch = await searchWorker({
+      type: "search",
+      board: Array(225).fill(0),
+      player: R.BLACK,
+      depth: 2,
+      timeMs: 2000,
+      moves: [
+        { x: 7, y: 7, priority: 3 },
+        { x: 6, y: 7, priority: 2 },
+        { x: 8, y: 7, priority: 1 }
+      ]
+    });
+    const progress = seededSearch.filter((message) => message.type === "progress");
+    const done = seededSearch.find((message) => message.type === "done");
+    check("real worker progress and candidates", progress.length === 3 && progress.every((message) => Number.isFinite(message.candidate.score)));
+    check("real worker message order", done && seededSearch.indexOf(done) > seededSearch.indexOf(progress[progress.length - 1]));
+    check("real worker terminal result", done && done.best && done.nodes > 0);
+
+    const terminalSearch = await searchWorker({
+      type: "search",
+      board: Array(225).fill(R.BLACK),
+      player: R.WHITE,
+      depth: 2,
+      timeMs: 100,
+      moves: []
+    });
+    const terminalDone = terminalSearch.find((message) => message.type === "done");
+    check("real worker terminal board", terminalDone && terminalDone.best === null && terminalDone.nodes === 0);
+
+    const timeoutMoves = [];
+    for (let y = 4; y <= 10; y += 1) {
+      for (let x = 4; x <= 10; x += 1) timeoutMoves.push({ x, y, priority: 1 });
+    }
+    const timedStarted = performance.now();
+    const timedSearch = await searchWorker({
+      type: "search",
+      board: Array(225).fill(0),
+      player: R.BLACK,
+      depth: 6,
+      timeMs: 1,
+      moves: timeoutMoves
+    });
+    check("real worker deadline", performance.now() - timedStarted < 5000 && timedSearch.some((message) => message.type === "done") && timedSearch.filter((message) => message.type === "progress").length < timeoutMoves.length);
+
+    const cancellation = await cancelWorker({
+      type: "search",
+      board: Array(225).fill(0),
+      player: R.BLACK,
+      depth: 6,
+      timeMs: 30000,
+      moves: timeoutMoves
+    });
+    check("real worker cancellation", !cancellation.done && cancellation.messages === cancellation.countAtCancellation);
+
+    win.document.getElementById("depth").value = "1";
+    win.document.getElementById("timeLimit").value = "1";
+    A.humanMove({ x: 7, y: 7 });
+    await waitFor(() => !A.state.thinking && A.state.history.length >= 3);
+    const candidateRows = win.document.querySelectorAll("#candidates .candidate");
+    check("application renders real worker candidates", candidateRows.length > 0 && Array.from(candidateRows).every((row) => /^-?\d+$/.test(row.lastElementChild.textContent.trim())));
+    check("application applies real AI move", A.state.board.filter((value) => value !== R.EMPTY).length === 2);
+
+    win.document.getElementById("depth").value = "6";
+    win.document.getElementById("timeLimit").value = "30";
+    win.document.getElementById("humanColor").value = String(R.WHITE);
+    A.newGame();
+    const startedWorkers = A.state.thinking && A.state.workers.length > 0;
+    win.document.getElementById("humanColor").value = String(R.BLACK);
+    A.newGame();
+    check("application cancels and cleans workers", startedWorkers && !A.state.thinking && A.state.workers.length === 0 && A.state.history.length === 1);
+
+    A.state.board[R.key(7, 7)] = R.BLACK;
+    A.state.board[R.key(8, 8)] = R.WHITE;
+    A.state.candidates = [
+      { move: { x: 5, y: 7 }, score: -100, pv: [] },
+      { move: { x: 6, y: 7 }, score: 0, pv: [] },
+      { move: { x: 9, y: 7 }, score: 100, pv: [] }
     ];
-    const ok = checks.every((item) => item[1]);
-    document.getElementById("result").textContent = (ok ? "PASS" : "FAIL") + "\n" + checks.map((item) => (item[1] ? "PASS " : "FAIL ") + item[0]).join("\n");
-    document.title = ok ? "PASS" : "FAIL";
-  } catch (error) { document.getElementById("result").textContent = "FAIL\n" + error.stack; document.title = "FAIL"; }
-}, { once:true });
-</script></body></html>
+    win.document.getElementById("cheat").checked = true;
+    A.draw();
+    const pixels = canvas.getContext("2d").getImageData(0, 0, canvas.width, canvas.height).data;
+    const colors = new Set();
+    for (let index = 0; index < pixels.length; index += 400) {
+      colors.add(pixels[index] + ":" + pixels[index + 1] + ":" + pixels[index + 2]);
+    }
+    check("board and score pixels are nonblank", colors.size >= 8);
+
+    const passed = checks.every((item) => item[1]);
+    result.textContent = (passed ? "PASS" : "FAIL") + "\n" + checks.map((item) => (item[1] ? "PASS " : "FAIL ") + item[0]).join("\n");
+    result.hidden = true;
+    document.title = passed ? "PASS" : "FAIL";
+  } catch (error) {
+    result.textContent = "FAIL\n" + (error.stack || error);
+    document.title = "FAIL";
+  }
+}, { once: true });
+</script>
+</body>
+</html>

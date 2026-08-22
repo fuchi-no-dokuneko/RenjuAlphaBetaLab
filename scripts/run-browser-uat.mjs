@@ -331,6 +331,56 @@ function parseChecks(resultText) {
   return checks.length ? checks : [{ name: "browser acceptance test", passed: lines[0] === "PASS" }];
 }
 
+async function inspectRenderedApp(client) {
+  const evaluated = await client.call("Runtime.evaluate", {
+    expression: `JSON.stringify((() => {
+      const frame = document.getElementById("app");
+      const win = frame.contentWindow;
+      const doc = frame.contentDocument;
+      const canvas = doc.getElementById("board");
+      const rect = canvas.getBoundingClientRect();
+      const pixels = canvas.getContext("2d").getImageData(0, 0, canvas.width, canvas.height).data;
+      const colors = new Set();
+      const stride = Math.max(4, Math.floor(pixels.length / 8000 / 4) * 4);
+      for (let index = 0; index < pixels.length; index += stride) {
+        colors.add(pixels[index] + ":" + pixels[index + 1] + ":" + pixels[index + 2]);
+      }
+      const controls = Array.from(doc.querySelectorAll("button, input, select"))
+        .filter((element) => {
+          const style = win.getComputedStyle(element);
+          return style.display !== "none" && style.visibility !== "hidden";
+        })
+        .map((element) => ({
+          id: element.id || element.tagName.toLowerCase(),
+          rect: element.getBoundingClientRect(),
+        }));
+      const overlaps = [];
+      for (let left = 0; left < controls.length; left += 1) {
+        for (let right = left + 1; right < controls.length; right += 1) {
+          const a = controls[left].rect;
+          const b = controls[right].rect;
+          if (Math.min(a.right, b.right) - Math.max(a.left, b.left) > 1
+              && Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top) > 1) {
+            overlaps.push(controls[left].id + ":" + controls[right].id);
+          }
+        }
+      }
+      return {
+        canvasHeight: rect.height,
+        canvasWidth: rect.width,
+        colorCount: colors.size,
+        documentWidth: doc.documentElement.scrollWidth,
+        labels: [0, 7, 8, 14].map((index) => win.RenjuApp.columnName(index)),
+        overlaps,
+        viewportWidth: win.innerWidth,
+      };
+    })())`,
+    returnByValue: true,
+  });
+  if (!evaluated.result?.value) throw new Error("Could not inspect rendered Renju application");
+  return JSON.parse(evaluated.result.value);
+}
+
 async function writeTestReports(checks, durationMs, resultText, coverage) {
   const failures = checks.filter((check) => !check.passed).length;
   const testCases = checks.map((check) => {
@@ -417,6 +467,12 @@ async function main() {
     await client.call("Debugger.enable");
     await client.call("Profiler.enable");
     await client.call("Profiler.startPreciseCoverage", { callCount: true, detailed: true });
+    await client.call("Emulation.setDeviceMetricsOverride", {
+      width: 1280,
+      height: 900,
+      deviceScaleFactor: 1,
+      mobile: false,
+    });
 
     const url = `http://127.0.0.1:${serverPort}${testPath}`;
     await client.call("Page.navigate", { url });
@@ -437,12 +493,52 @@ async function main() {
       await sleep(100);
     }
 
-    const screenshot = await client.call("Page.captureScreenshot", { format: "png", fromSurface: true });
-    await writeFile(path.join(reportDirectory, "screenshot.png"), Buffer.from(screenshot.data, "base64"));
+    const desktopLayout = await inspectRenderedApp(client);
+    const desktopScreenshot = await client.call("Page.captureScreenshot", { format: "png", fromSurface: true });
+    await writeFile(path.join(reportDirectory, "desktop.png"), Buffer.from(desktopScreenshot.data, "base64"));
+
+    await client.call("Emulation.setDeviceMetricsOverride", {
+      width: 390,
+      height: 844,
+      deviceScaleFactor: 1,
+      mobile: true,
+    });
+    await sleep(250);
+    const mobileLayout = await inspectRenderedApp(client);
+    const mobileScreenshot = await client.call("Page.captureScreenshot", { format: "png", fromSurface: true });
+    await writeFile(path.join(reportDirectory, "mobile.png"), Buffer.from(mobileScreenshot.data, "base64"));
+
     const { result: coverageEntries } = await client.call("Profiler.takePreciseCoverage");
     await client.call("Profiler.stopPreciseCoverage");
     const coverage = await createCoverageReports(client, coverageEntries, scripts, new URL(url).origin);
     const checks = parseChecks(resultText);
+    checks.push(
+      {
+        name: "desktop canvas pixels and layout",
+        passed: desktopLayout.viewportWidth >= 1000
+          && desktopLayout.canvasWidth >= 500
+          && desktopLayout.canvasWidth === desktopLayout.canvasHeight
+          && desktopLayout.colorCount >= 8
+          && desktopLayout.documentWidth <= desktopLayout.viewportWidth + 1
+          && desktopLayout.overlaps.length === 0,
+      },
+      {
+        name: "mobile canvas pixels and layout",
+        passed: mobileLayout.viewportWidth <= 420
+          && mobileLayout.canvasWidth >= 300
+          && mobileLayout.canvasWidth <= mobileLayout.viewportWidth + 1
+          && mobileLayout.canvasWidth === mobileLayout.canvasHeight
+          && mobileLayout.colorCount >= 8
+          && mobileLayout.documentWidth <= mobileLayout.viewportWidth + 1
+          && mobileLayout.overlaps.length === 0,
+      },
+      {
+        name: "coordinate labels survive responsive rendering",
+        passed: desktopLayout.labels.join(",") === "A,H,J,P"
+          && mobileLayout.labels.join(",") === "A,H,J,P",
+      },
+    );
+    resultText += `\n${checks.slice(-3).map((check) => `${check.passed ? "PASS" : "FAIL"} ${check.name}`).join("\n")}`;
     await writeFile(path.join(reportDirectory, "result.txt"), `${resultText}\n`);
     await writeTestReports(checks, Date.now() - startedAt, resultText, coverage);
 
