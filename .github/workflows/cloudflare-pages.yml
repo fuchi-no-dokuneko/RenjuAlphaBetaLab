@@ -17,7 +17,7 @@ jobs:
       - name: Check JavaScript syntax
         run: node --check engine.js && node --check app.js && node --check ai-worker.js
       - name: Run rule-engine unit tests
-        run: node tests/rules.test.js && node tests/worker.test.js
+        run: node tests/rules.test.js && node tests/worker.test.js && node --test tests/conformance.test.js
       - name: Run browser unit and UAT coverage
         run: node scripts/run-browser-uat.mjs
       - name: Verify SonarQube input reports
@@ -44,6 +44,13 @@ jobs:
         with:
           name: browser-test-reports
           path: build/reports/browser-uat/
+          if-no-files-found: error
+      - name: Upload Renju conformance report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: renju-conformance
+          path: build/reports/renju-conformance-mismatches.json
           if-no-files-found: error
   deploy:
     needs: validate
