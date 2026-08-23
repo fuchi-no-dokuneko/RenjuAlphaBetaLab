@@ -1,0 +1,2 @@
+renju-engine: Real typed-array positions from the conformance corpus; no rule or board mocks.
+symmetry-runner: Every corpus position is rotated and reflected through real engine APIs; no transformed expectations are mocked.

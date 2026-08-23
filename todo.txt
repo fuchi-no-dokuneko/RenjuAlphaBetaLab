@@ -1,0 +1,3 @@
+繁中：官方規則衍生語料 MVP 完成；失配檢查及 CI 整合待完成。
+
+English: Official-rule-derived corpus MVP is complete; mismatch review and CI integration remain.
