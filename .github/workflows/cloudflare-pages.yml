@@ -1,7 +1,7 @@
 name: Cloudflare Pages
 on:
   push:
-    branches: [main]
+    branches: [main, "tickets/**"]
   pull_request:
 jobs:
   validate:
@@ -54,7 +54,7 @@ jobs:
           if-no-files-found: error
   deploy:
     needs: validate
-    if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+    if: ${{ github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/tickets/renju-conformance-260823') }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
@@ -65,9 +65,11 @@ jobs:
           PROJECT: ${{ vars.CLOUDFLARE_PROJECT_NAME }}
         run: |
           if [ -n "$TOKEN" ] && [ -n "$ACCOUNT" ]; then echo configured=true >>"$GITHUB_OUTPUT"; echo "project=${PROJECT:-renju-alpha-beta-lab}" >>"$GITHUB_OUTPUT"; else echo configured=false >>"$GITHUB_OUTPUT"; fi
+      - name: Record deployment revision
+        run: printf '{"commit":"%s","branch":"%s"}\n' "$GITHUB_SHA" "$GITHUB_REF_NAME" > deployment.json
       - if: steps.config.outputs.configured == 'true'
         uses: cloudflare/wrangler-action@v3
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          command: pages deploy . --project-name=${{ steps.config.outputs.project }}
+          command: pages deploy . --project-name=${{ steps.config.outputs.project }} --branch=main
