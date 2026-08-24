@@ -34,6 +34,25 @@ A complete daily result requires every main UAT scenario to execute. A dry run p
 - `@creates-temporary-*` scenarios create isolated test data or media and include cleanup or state restoration steps. Do not point them at irreplaceable production data.
 - Browser UAT covers observable end-to-end workflows and failure states. Exhaustive input combinations, statistical correctness, and low-level algorithm invariants belong in unit or instrumentation tests.
 
+## Feature-to-scenario coverage
+
+| Product surface | Daily UAT scenarios | Expected contract |
+| --- | --- | --- |
+| Defaults, coordinates, board | Open a clean coordinate-labelled 15 by 15 game | The board, A-H/J-P and 1-15 coordinate model, controls, metrics, replay state, and no-op undo initialize cleanly. |
+| Human turn and parallel AI | Play as black and inspect complete parallel search analysis | A legal move transitions through worker search to ranked candidates, nodes, full progress, principal variation, occupied-point rejection, and round undo. |
+| Score visualization | Show and hide ranked candidate colors on the live board | The checkbox controls the legend and canvas overlay; candidate colors and compact labels represent relative scores. |
+| Player color and replay | Let the AI open as black and navigate replay history | White selection takes effect on New game; AI opens, replay is read-only, Previous/Next/Live navigate, and undo restores the prior round. |
+| Search cancellation | Cancel an active deep search with a new game | While thinking, extra board input is ignored; New game terminates workers and clears board and analysis state. |
+| Black overline | Reject a black overline and leave the board unchanged | The forbidden move reports `overline` and is not placed. |
+| Black double-four | Reject a black double-four and leave the board unchanged | The forbidden move reports `double-four` and is not placed. |
+| Black double-three and overlay | Visualize and reject a black double-three | The overlay marks forbidden points and the attempted move reports `double-three` without changing the board. |
+| Black exact-five win | Allow an exact black five and lock the finished game | Exact five is legal for black, declares a win, and blocks later board input. |
+| White overline win | Allow white to win with an overline | Five or more is legal for white and declares a win. |
+| Full-board draw | Declare a draw when the final legal move fills the board | A non-winning final move fills the board, declares a draw, and ends input. |
+| Session recovery | Reload cancels work and restores non-persistent defaults | Reload terminates active work and restores default color, limits, visualization, board, analysis, and storage state. |
+
+Every scenario receives a new Chromium session and the `After` hook closes it, including worker and browser cleanup after failures.
+
 ## Daily result and SonarQube
 
 Every real run writes these local files under `build/reports/acceptance/<suite>/`:

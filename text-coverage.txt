@@ -1,2 +1,3 @@
-renju-engine: Real typed-array positions from the conformance corpus; no rule or board mocks.
-symmetry-runner: Every corpus position is rotated and reflected through real engine APIs; no transformed expectations are mocked.
+engine.js: Tested by corpus, symmetry checks, and real browser positions; no rule module is mocked.
+ai-worker.js: Tested through real Chromium Web Workers and search messages; no worker is mocked.
+app.js: Tested through real DOM, canvas, replay, search, and controls; no product module is mocked.
