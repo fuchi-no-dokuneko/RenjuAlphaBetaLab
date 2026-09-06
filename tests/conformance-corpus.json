@@ -1,0 +1,130 @@
+{
+  "schemaVersion": "1.0.0",
+  "boardSize": 15,
+  "ruleVariant": "RIF international Renju: exact five wins for black; white wins with five or more; black overline, double-four, and double-three are forbidden",
+  "source": "https://renju.se/rif/rifrules.htm",
+  "coordinateSystem": "zero-based [x,y], transformed into every rotation and reflection",
+  "positions": [
+    {
+      "id": "black-exact-five",
+      "rule": "black-win",
+      "black": [[3, 7], [4, 7], [5, 7], [6, 7]],
+      "white": [],
+      "move": [7, 7],
+      "player": 1,
+      "legal": true,
+      "forbidden": null,
+      "winner": 1
+    },
+    {
+      "id": "black-overline",
+      "rule": "overline",
+      "black": [[2, 7], [3, 7], [4, 7], [5, 7], [6, 7]],
+      "white": [],
+      "move": [7, 7],
+      "player": 1,
+      "legal": false,
+      "forbidden": "overline",
+      "winner": 0
+    },
+    {
+      "id": "white-overline-win",
+      "rule": "white-win",
+      "black": [],
+      "white": [[2, 7], [3, 7], [4, 7], [5, 7], [6, 7]],
+      "move": [7, 7],
+      "player": 2,
+      "legal": true,
+      "forbidden": null,
+      "winner": 2
+    },
+    {
+      "id": "center-double-four",
+      "rule": "double-four",
+      "black": [[5, 7], [6, 7], [8, 7], [7, 5], [7, 6], [7, 8]],
+      "white": [],
+      "move": [7, 7],
+      "player": 1,
+      "legal": false,
+      "forbidden": "double-four",
+      "winner": 0
+    },
+    {
+      "id": "center-double-three",
+      "rule": "double-three",
+      "black": [[6, 7], [8, 7], [7, 6], [7, 8]],
+      "white": [],
+      "move": [7, 7],
+      "player": 1,
+      "legal": false,
+      "forbidden": "double-three",
+      "winner": 0
+    },
+    {
+      "id": "single-four-negative",
+      "rule": "double-four-negative",
+      "black": [[5, 7], [6, 7], [8, 7]],
+      "white": [],
+      "move": [7, 7],
+      "player": 1,
+      "legal": true,
+      "forbidden": null,
+      "winner": 0
+    },
+    {
+      "id": "single-three-negative",
+      "rule": "double-three-negative",
+      "black": [[6, 7], [8, 7]],
+      "white": [],
+      "move": [7, 7],
+      "player": 1,
+      "legal": true,
+      "forbidden": null,
+      "winner": 0
+    },
+    {
+      "id": "blocked-three-negative",
+      "rule": "blocked-pattern",
+      "black": [[6, 7], [8, 7]],
+      "white": [[5, 7], [9, 7]],
+      "move": [7, 7],
+      "player": 1,
+      "legal": true,
+      "forbidden": null,
+      "winner": 0
+    },
+    {
+      "id": "edge-exact-five",
+      "rule": "edge-win",
+      "black": [[0, 0], [1, 0], [2, 0], [3, 0]],
+      "white": [],
+      "move": [4, 0],
+      "player": 1,
+      "legal": true,
+      "forbidden": null,
+      "winner": 1
+    },
+    {
+      "id": "edge-overline",
+      "rule": "edge-overline",
+      "black": [[0, 0], [1, 0], [2, 0], [3, 0], [4, 0]],
+      "white": [],
+      "move": [5, 0],
+      "player": 1,
+      "legal": false,
+      "forbidden": "overline",
+      "winner": 0
+    },
+    {
+      "id": "occupied-negative",
+      "rule": "occupied",
+      "black": [[7, 7]],
+      "white": [],
+      "move": [7, 7],
+      "player": 1,
+      "legal": false,
+      "forbidden": "occupied",
+      "winner": null
+    }
+  ]
+}

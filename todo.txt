@@ -1,0 +1,3 @@
+繁中：無；規則語料、對稱檢查、失配報告及 CI 均完成。
+
+English: None; rule corpus, symmetry checks, mismatch report, and CI are complete.
